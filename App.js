@@ -11,7 +11,6 @@ import {
 } from 'react-native';
 import { Audio } from 'expo-av';
 import * as MediaLibrary from 'expo-media-library';
-import Slider from '@react-native-community/slider';
 
 export default function App() {
   const [songs, setSongs] = useState([]);
@@ -21,29 +20,30 @@ export default function App() {
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
   const [fullPlayerVisible, setFullPlayerVisible] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(null);
-  const [timerModalVisible, setTimerModalVisible] = useState(false);
 
   useEffect(() => {
     (async () => {
-      await Audio.setAudioModeAsync({
-        staysActiveInBackground: true,
-        shouldDuckAndroid: true,
-        playThroughEarpieceAndroid: false,
-      });
+      try {
+        await Audio.setAudioModeAsync({
+          staysActiveInBackground: true,
+          shouldDuckAndroid: true,
+          playThroughEarpieceAndroid: false,
+        });
 
-      const { status } = await MediaLibrary.requestPermissionsAsync();
-      if (status === 'granted') {
-        const media = await MediaLibrary.getAssetsAsync({ mediaType: 'audio' });
-        setSongs(media.assets);
+        const { status } = await MediaLibrary.requestPermissionsAsync();
+        if (status === 'granted') {
+          const media = await MediaLibrary.getAssetsAsync({ mediaType: 'audio' });
+          setSongs(media.assets);
+        }
+      } catch (e) {
+        console.log(e);
       }
     })();
   }, []);
 
-  // تحديث شريط التقدم والوقت
   const onPlaybackStatusUpdate = (status) => {
     if (status.isLoaded) {
-      setPosition(status.positionMillis);
+      setPosition(status.positionMillis || 0);
       setDuration(status.durationMillis || 0);
       setIsPlaying(status.isPlaying);
       if (status.didJustFinish) {
@@ -65,7 +65,7 @@ export default function App() {
       setSound(newSound);
       setCurrentSong(song);
       setIsPlaying(true);
-      setFullPlayerVisible(true); // فتح المشغل الكامل فور اختيار الأغنية
+      setFullPlayerVisible(true);
     } catch (error) {
       console.log('Error playing sound:', error);
     }
@@ -80,18 +80,14 @@ export default function App() {
     }
   };
 
-  const seekAudio = async (value) => {
-    if (sound) {
-      await sound.setPositionAsync(value);
-    }
-  };
-
   const formatTime = (millis) => {
     if (!millis) return '00:00';
     const minutes = Math.floor(millis / 60000);
     const seconds = Math.floor((millis % 60000) / 1000);
     return `${minutes < 10 ? '0' : ''}${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
   };
+
+  const progressPercent = duration > 0 ? (position / duration) * 100 : 0;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -100,14 +96,6 @@ export default function App() {
       {/* الهيدر العلوي */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>مكتبتي الموسيقية</Text>
-        <TouchableOpacity
-          style={styles.timerButton}
-          onPress={() => setTimerModalVisible(true)}
-        >
-          <Text style={styles.timerButtonText}>
-            {timeLeft ? `⏱️ ${Math.floor(timeLeft / 60)}m` : '⏱️ المؤقت'}
-          </Text>
-        </TouchableOpacity>
       </View>
 
       {/* قائمة الأغاني */}
@@ -129,7 +117,7 @@ export default function App() {
         )}
       />
 
-      {/* الشريط السفلي للوصول السريع للمشغل */}
+      {/* الشريط السفلي */}
       {currentSong && (
         <TouchableOpacity
           style={styles.miniPlayer}
@@ -144,7 +132,7 @@ export default function App() {
         </TouchableOpacity>
       )}
 
-      {/* الشاشة الكاملة للمشغل (مطابقة للصورة) */}
+      {/* الشاشة الكاملة للمشغل */}
       <Modal visible={fullPlayerVisible} animationType="slide">
         <View style={styles.fullPlayerContainer}>
           {/* شريط الإغلاق العلوي */}
@@ -174,25 +162,18 @@ export default function App() {
               <Text style={styles.fullSongTitle} numberOfLines={1}>
                 {currentSong?.filename}
               </Text>
-              <Text style={styles.artistName}>فنان غير معروف</Text>
+              <Text style={styles.artistName}>ملف صوتي</Text>
             </View>
             <TouchableOpacity style={{ marginLeft: 15 }}>
               <Text style={styles.actionIcon}>♡</Text>
             </TouchableOpacity>
           </View>
 
-          {/* شريط التقدم (Slider) */}
+          {/* شريط التقدم المخصص */}
           <View style={styles.progressContainer}>
-            <Slider
-              style={{ width: '100%', height: 40 }}
-              minimumValue={0}
-              maximumValue={duration}
-              value={position}
-              minimumTrackTintColor="#FFFFFF"
-              maximumTrackTintColor="rgba(255,255,255,0.3)"
-              thumbTintColor="#FFFFFF"
-              onSlidingComplete={seekAudio}
-            />
+            <View style={styles.progressBarBackground}>
+              <View style={[styles.progressBarFill, { width: `${progressPercent}%` }]} />
+            </View>
             <View style={styles.timeRow}>
               <Text style={styles.timeText}>{formatTime(position)}</Text>
               <Text style={styles.timeText}>{formatTime(duration)}</Text>
@@ -217,19 +198,17 @@ export default function App() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#121212' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', padding: 20 },
+  header: { padding: 20, alignItems: 'center' },
   headerTitle: { color: '#FFF', fontSize: 20, fontWeight: 'bold' },
-  timerButton: { backgroundColor: '#282828', padding: 8, borderRadius: 20 },
-  timerButtonText: { color: '#1DB954', fontWeight: 'bold' },
   songCard: { backgroundColor: '#1E1E1E', padding: 16, marginHorizontal: 16, marginVertical: 6, borderRadius: 8 },
   activeSongCard: { borderColor: '#1DB954', borderWidth: 1 },
   songTitle: { color: '#FFF', fontSize: 14 },
   miniPlayer: { position: 'absolute', bottom: 20, left: 16, right: 16, backgroundColor: '#282828', padding: 15, borderRadius: 12, flexDirection: 'row', alignItems: 'center' },
   miniPlayerTitle: { color: '#FFF', flex: 1 },
+  miniPlayBtn: { padding: 5 },
   miniPlayBtnText: { fontSize: 20 },
   
-  // Full Player Styles
-  fullPlayerContainer: { flex: 1, backgroundColor: '#4A3B43', padding: 20, justifyContent: 'space-between' },
+  fullPlayerContainer: { flex: 1, backgroundColor: '#3A2B33', padding: 20, justifyContent: 'space-between' },
   fullHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 },
   closeIcon: { color: '#FFF', fontSize: 24, fontWeight: 'bold' },
   menuIcon: { color: '#FFF', fontSize: 24 },
@@ -238,22 +217,24 @@ const styles = StyleSheet.create({
   activeTabText: { backgroundColor: 'rgba(255,255,255,0.2)', color: '#FFF' },
   
   coverWrapper: { alignItems: 'center', marginVertical: 20 },
-  coverBox: { width: 280, height: 280, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 24, justifyContent: 'center', alignItems: 'center' },
-  vinylRecord: { width: 200, height: 200, borderRadius: 100, backgroundColor: '#111', justifyContent: 'center', alignItems: 'center' },
-  vinylCenter: { width: 70, height: 70, borderRadius: 35, backgroundColor: '#E53935' },
+  coverBox: { width: 260, height: 260, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 24, justifyContent: 'center', alignItems: 'center' },
+  vinylRecord: { width: 190, height: 190, borderRadius: 95, backgroundColor: '#111', justifyContent: 'center', alignItems: 'center' },
+  vinylCenter: { width: 65, height: 65, borderRadius: 33, backgroundColor: '#E53935' },
   
   songDetails: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 10 },
-  fullSongTitle: { color: '#FFF', fontSize: 20, fontWeight: 'bold' },
+  fullSongTitle: { color: '#FFF', fontSize: 18, fontWeight: 'bold' },
   artistName: { color: 'rgba(255,255,255,0.6)', marginTop: 4 },
-  actionIcon: { color: '#FFF', fontSize: 26 },
+  actionIcon: { color: '#FFF', fontSize: 24 },
   
   progressContainer: { marginVertical: 10 },
-  timeRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: -5 },
+  progressBarBackground: { height: 4, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 2, overflow: 'hidden' },
+  progressBarFill: { height: '100%', backgroundColor: '#FFF' },
+  timeRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
   timeText: { color: 'rgba(255,255,255,0.6)', fontSize: 12 },
   
   controlsRow: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', marginBottom: 20 },
   controlBtn: { color: '#FFF', fontSize: 22 },
-  mainPlayBtn: { width: 65, height: 65, borderRadius: 35, borderHeight: 2, borderColor: '#FFF', borderWidth: 2, justifyContent: 'center', alignItems: 'center' },
+  mainPlayBtn: { width: 65, height: 65, borderRadius: 35, borderColor: '#FFF', borderWidth: 2, justifyContent: 'center', alignItems: 'center' },
   mainPlayBtnText: { color: '#FFF', fontSize: 26 },
 });
-         
+    
