@@ -5,6 +5,11 @@
     "version": "1.0.0",
     "android": {
       "package": "com.rami1cloud.musicplayer12"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "8b5f3a09-6799-4a94-8182-159c98bd5d05"
+      }
     }
   }
 }
