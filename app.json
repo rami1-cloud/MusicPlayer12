@@ -2,6 +2,7 @@
   "expo": {
     "name": "MusicPlayer12",
     "slug": "musicplayer12",
+    "owner": "rami1-clouds-team",
     "version": "1.0.0",
     "android": {
       "package": "com.rami1cloud.musicplayer12"
