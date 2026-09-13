@@ -4,8 +4,15 @@
     "slug": "musicplayer12",
     "owner": "rami1-clouds-team",
     "version": "1.0.0",
+    "orientation": "portrait",
+    "splash": {
+      "backgroundColor": "#ffffff"
+    },
     "android": {
-      "package": "com.rami1cloud.musicplayer12"
+      "package": "com.rami1cloud.musicplayer12",
+      "splash": {
+        "backgroundColor": "#ffffff"
+      }
     },
     "extra": {
       "eas": {
