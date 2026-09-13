@@ -1,0 +1,10 @@
+{
+  "expo": {
+    "name": "MusicPlayer12",
+    "slug": "musicplayer12",
+    "version": "1.0.0",
+    "android": {
+      "package": "com.rami1cloud.musicplayer12"
+    }
+  }
+}
